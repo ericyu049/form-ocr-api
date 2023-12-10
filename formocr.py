@@ -6,6 +6,8 @@ from openai import OpenAI
 from io import BytesIO
 from PIL import Image
 import base64
+import os
+import pytesseract
 
 class FormOCR():
     def analyze(self, filename):
@@ -20,6 +22,7 @@ class FormOCR():
 
         # perform ocr on cropped section
         extracted_text = self.run_ocr(filename)
+        # extracted_text = self.alternate_run_ocr(filename)
 
         return  {
             "image": output_image,
@@ -87,11 +90,11 @@ class FormOCR():
         for t in text:
             t = (t[1], round(t[2], 2))
             text_list.append(t)
+        print(text_list)
         prompt = 'Extract full name and address from the easyocr result into json object named info.\n ' + \
             ', '.join([f"('{item[0]}', {item[1]})" for item in text_list])
         data = {'content': prompt, 'role': "user"}
-        chatgpt = OpenAI(
-            api_key='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')
+        chatgpt = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
         response = chatgpt.chat.completions.create(
             model='gpt-3.5-turbo-1106',
             response_format={"type": "json_object"},
@@ -99,3 +102,11 @@ class FormOCR():
             temperature=0
         )
         return (response.choices[0].message.content)
+
+
+    def alternate_run_ocr(self, filename):
+        pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'  # Replace with the actual path on your system
+        img = Image.open('uploads/' + filename[:-4] + '_cropped.png')
+        text = pytesseract.image_to_string(img)
+        print(text)
+
